@@ -14,6 +14,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 
 import { ScenarioService } from 'core/services/scenario/scenario.service';
 import { ScenarioData } from '@models/scenario/list-scenario-data.model';
+import { Apollo, gql } from 'apollo-angular';
+import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.service';
 
 @Component({
   selector: 'app-scenario-list',
@@ -40,6 +42,7 @@ export class ScenarioListComponent {
   private route = inject(ActivatedRoute);
   private api = inject(ScenarioService);
   private fb = inject(FormBuilder);
+  private graphql = inject(ScenarioGraphqlService);
 
   scenarios: ScenarioData[] = [];
   loading = true;
@@ -110,16 +113,26 @@ export class ScenarioListComponent {
 
   private fetch(filter: any) {
     this.loading = true;
-    this.api.list(filter).subscribe({
+    this.graphql.listScenarios().subscribe({
       next: (res) => {
         this.scenarios = res;
         this.loading = false;
       },
       error: (err) => {
-        this.error = err?.error?.error || 'Failed to load scenarios';
+        this.error = err.message || 'Failed to load scenarios';
         this.loading = false;
       },
     });
+    // this.api.list(filter).subscribe({
+    //   next: (res) => {
+    //     this.scenarios = res;
+    //     this.loading = false;
+    //   },
+    //   error: (err) => {
+    //     this.error = err?.error?.error || 'Failed to load scenarios';
+    //     this.loading = false;
+    //   },
+    // });
   }
 
   createScenario() {
