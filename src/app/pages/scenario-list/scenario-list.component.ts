@@ -12,9 +12,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatExpansionModule } from '@angular/material/expansion';
 
-import { ScenarioService } from 'core/services/scenario/scenario.service';
 import { ScenarioData } from '@models/scenario/list-scenario-data.model';
-import { Apollo, gql } from 'apollo-angular';
 import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.service';
 
 @Component({
@@ -40,7 +38,6 @@ import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.
 export class ScenarioListComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private api = inject(ScenarioService);
   private fb = inject(FormBuilder);
   private graphql = inject(ScenarioGraphqlService);
 
@@ -144,7 +141,7 @@ export class ScenarioListComponent {
   }
 
   deleteScenario(id: number) {
-    this.api.delete({ id }).subscribe({
+    this.graphql.deleteScenario(id).subscribe({
       next: () => {
         this.scenarios = this.scenarios.filter((s) => s.id !== id);
       },
@@ -152,5 +149,13 @@ export class ScenarioListComponent {
         this.error = err?.error?.error || 'Failed to delete scenario';
       },
     });
+    // this.api.delete({ id }).subscribe({
+    //   next: () => {
+    //     this.scenarios = this.scenarios.filter((s) => s.id !== id);
+    //   },
+    //   error: (err) => {
+    //     this.error = err?.error?.error || 'Failed to delete scenario';
+    //   },
+    // });
   }
 }

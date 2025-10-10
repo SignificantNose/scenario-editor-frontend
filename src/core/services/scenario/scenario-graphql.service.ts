@@ -11,6 +11,7 @@ import {
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { RoutePaths } from 'app/app.router-path';
+import { CreateScenarioData } from '@models/scenario/create-scenario-data.model';
 
 @Injectable({ providedIn: 'root' })
 export class ScenarioGraphqlService {
@@ -51,13 +52,6 @@ export class ScenarioGraphqlService {
           }
           return parsed.output;
         }),
-        catchError((err) => {
-          if (err?.networkError?.statusCode === 401) {
-            this.authService.logout();
-            this.router.navigate([`/${RoutePaths.Auth}`]);
-          }
-          return throwError(() => err);
-        }),
       );
   }
 
@@ -95,12 +89,80 @@ export class ScenarioGraphqlService {
           }
           return parsed.output;
         }),
-        catchError((err) => {
-          if (err?.networkError?.statusCode === 401) {
-            this.authService.logout();
-            this.router.navigate([`/${RoutePaths.Auth}`]);
+      );
+  }
+
+  createScenario(data: CreateScenarioData): Observable<number> {
+    return this.apollo
+      .mutate<{ createScenario: number }, CreateScenarioData>({
+        // @ts-ignore
+        mutation: gql`
+          mutation CreateScenario($name: String!, $emitters: [EmitterInput], $listeners: [ListenerInput])
+          {
+            createScenario(name: $name, emitters: $emitters, listeners: $listeners)
           }
-          return throwError(() => err);
+        `,
+        variables: {
+          name: data.name,
+          emitters: data.emitters ?? [],
+          listeners: data.listeners ?? [],
+        },
+      })
+      .pipe(
+        map((result) => {
+          const id = result.data?.createScenario;
+          if (id == null) throw new Error('Failed to create scenario');
+          return id;
+        }),
+      );
+  }
+
+  updateScenario(id: number, data: CreateScenarioData): Observable<boolean> {
+    return this.apollo
+      .mutate<{ updateScenario: boolean }, { id: number } & CreateScenarioData>({
+        // @ts-ignore
+        mutation: gql`
+          mutation UpdateScenario(
+            $id: Int!
+            $name: String!
+            $emitters: [EmitterInput]
+            $listeners: [ListenerInput]
+          ) {
+            updateScenario(id: $id, name: $name, emitters: $emitters, listeners: $listeners)
+          }
+        `,
+        variables: {
+          id,
+          name: data.name,
+          emitters: data.emitters ?? [],
+          listeners: data.listeners ?? [],
+        },
+      })
+      .pipe(
+        map((result) => {
+          const ok = result.data?.updateScenario;
+          if (typeof ok !== 'boolean') throw new Error('Failed to update scenario');
+          return ok;
+        }),
+      );
+  }
+
+  deleteScenario(id: number): Observable<boolean> {
+    return this.apollo
+      .mutate<{ deleteScenario: boolean }, { id: number }>({
+        // @ts-ignore
+        mutation: gql`
+          mutation DeleteScenario($id: Int!) {
+            deleteScenario(id: $id)
+          }
+        `,
+        variables: { id },
+      })
+      .pipe(
+        map((result) => {
+          const ok = result.data?.deleteScenario;
+          if (typeof ok !== 'boolean') throw new Error('Failed to delete scenario');
+          return ok;
         }),
       );
   }
