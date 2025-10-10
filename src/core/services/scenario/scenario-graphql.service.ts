@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Apollo, gql } from 'apollo-angular';
-import { catchError, map, Observable, throwError } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import * as v from 'valibot';
 import {
   ScenarioData,
@@ -10,14 +10,11 @@ import {
 } from '@models/scenario/list-scenario-data.model';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { RoutePaths } from 'app/app.router-path';
 import { CreateScenarioData } from '@models/scenario/create-scenario-data.model';
 
 @Injectable({ providedIn: 'root' })
 export class ScenarioGraphqlService {
   private apollo = inject(Apollo);
-  private router = inject(Router);
-  private authService = inject(AuthService);
 
   listScenarios(): Observable<ListScenarioDataResponse> {
     return this.apollo
