@@ -63,3 +63,14 @@
 .file-upload-field {
   margin-top: 8px;
 }
+
+.edit-panel {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ccc;
+}
+.edit-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}

@@ -1,7 +1,6 @@
-@if(!scenario) {
+@if (!scenario) {
   <div class="loading-text">Loading scenario...</div>
-}
-@else {
+} @else {
   <div class="editor-container">
     <mat-toolbar color="primary" class="editor-header">
       <span class="editor-title">Edit Scenario</span>
@@ -22,11 +21,8 @@
     </mat-toolbar>
 
     <div class="editor-main">
-      <app-scenario-designer
-        class="designer"
-        [scenario]="scenario"
-        #designer
-      ></app-scenario-designer>
+      <app-scenario-designer class="designer" [scenario]="scenario" #designer>
+      </app-scenario-designer>
     </div>
   </div>
 }
