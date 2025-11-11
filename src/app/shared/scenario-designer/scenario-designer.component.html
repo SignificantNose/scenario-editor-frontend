@@ -2,69 +2,52 @@
   <canvas #canvas class="scenario-canvas"></canvas>
 
   <mat-card class="scenario-toolbar">
-    <!-- Scenario name form -->
-    <form [formGroup]="form">
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Scenario Name</mat-label>
-        <input matInput formControlName="name" required />
-        @if (form.controls['name'].hasError('required') && form.controls['name'].touched) {
-          <mat-error>Name is required</mat-error>
-        }
-        @if (form.controls['name'].hasError('pattern') && form.controls['name'].touched) {
-          <mat-error>Invalid name format</mat-error>
-        }
-      </mat-form-field>
-    </form>
+    @if (!editMode) {
+      <form [formGroup]="form">
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Scenario Name</mat-label>
+          <input matInput formControlName="name" required />
+          @if (form.controls['name'].hasError('required') && form.controls['name'].touched) {
+            <mat-error> Name is required </mat-error>
+          }
+          @if (form.controls['name'].hasError('pattern') && form.controls['name'].touched) {
+            <mat-error> Invalid name format </mat-error>
+          }
+        </mat-form-field>
+      </form>
 
-    <!-- Add object actions -->
-    <div class="toolbar-actions">
-      <button mat-stroked-button color="primary" (click)="addEmitter()">Add Emitter</button>
-      <button mat-stroked-button color="accent" (click)="addListener()">Add Listener</button>
-    </div>
+      <div class="toolbar-actions">
+        <button mat-stroked-button color="primary" (click)="addEmitter()">Add Emitter</button>
+        <button mat-stroked-button color="accent" (click)="addListener()">Add Listener</button>
+      </div>
+    }
 
-    <!-- Selected object info -->
     @if (selectedObject) {
       <div class="info-panel">
         <h3 class="info-panel-title">
           Selected {{ selectedObject.type === 'emitter' ? 'Emitter' : 'Listener' }}
         </h3>
 
-        <p>ID: {{ selectedObject.data.id }}</p>
         <p>
-          Position:
-          X: {{ selectedObject.data.position.x.toFixed(2) }},
-          Y: {{ selectedObject.data.position.y.toFixed(2) }},
-          Z: {{ selectedObject.data.position.z.toFixed(2) }}
+          Position: X: {{ selectedObject.data.position.x.toFixed(2) }}, Y:
+          {{ selectedObject.data.position.y.toFixed(2) }}, Z:
+          {{ selectedObject.data.position.z.toFixed(2) }}
         </p>
 
-        <!-- Emitter-specific fields -->
         @if (selectedObject.type === 'emitter') {
-          <mat-form-field appearance="fill" class="full-width file-upload-field">
-            <mat-label>Audio File</mat-label>
-            <input
-              type="file"
-              accept="audio/*"
-              (change)="onAudioSelected($event, selectedObject.data)"
-              hidden
-              #fileInput
-            />
-            <input
-              matInput
-              [readonly]="true"
-              placeholder="No file selected"
-              [value]="selectedObject.data.audioFileUri || ''"
-            />
-            <button mat-icon-button matSuffix (click)="fileInput.click()" type="button">
-              <mat-icon>upload_file</mat-icon>
-            </button>
-          </mat-form-field>
+          <p>Audio File: {{ selectedObject.data.audioFileUri || 'None' }}</p>
         }
 
-        <button mat-stroked-button color="warn" class="full-width" (click)="deleteSelected()">
+        <button
+          mat-stroked-button
+          color="warn"
+          class="full-width"
+          (click)="deleteSelected()"
+          [disabled]="editMode"
+        >
           Delete {{ selectedObject.type }}
         </button>
 
-        <!-- Edit button (only when not in edit mode) -->
         @if (!editMode) {
           <button mat-stroked-button color="primary" class="full-width" (click)="enterEditMode()">
             Edit {{ selectedObject.type }}
@@ -72,8 +55,7 @@
         }
       </div>
 
-      <!-- Edit panel -->
-      @if (editMode && editForm) {
+      @if (editMode && editForm && editClone) {
         <div class="edit-panel">
           <h3>Edit {{ selectedObject.type }}</h3>
 
@@ -82,17 +64,38 @@
               <mat-label>Height (Y)</mat-label>
               <input matInput type="number" formControlName="height" />
               @if (editForm.controls['height'].hasError('min')) {
-                <mat-error>Must be ≥ 0.1</mat-error>
+                <mat-error> Must be ≥ 0.1 </mat-error>
               }
             </mat-form-field>
 
-            @if (selectedObject.type === 'listener') {
+            @if (editClone.type === 'listener') {
               <mat-form-field appearance="fill" class="full-width">
                 <mat-label>Rotation (°)</mat-label>
                 <input matInput type="number" formControlName="rotation" />
                 @if (editForm.controls['rotation'].hasError('min')) {
-                  <mat-error>-180° to 180° allowed</mat-error>
+                  <mat-error> -180° to 180° allowed </mat-error>
                 }
+              </mat-form-field>
+            }
+
+            @if (editClone.type === 'emitter') {
+              <mat-form-field appearance="fill" class="full-width file-upload-field">
+                <mat-label>Audio File</mat-label>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  hidden
+                  #fileInput
+                  (change)="onAudioSelected($event, editClone.data)"
+                />
+                <input
+                  matInput
+                  [readonly]="true"
+                  [value]="editForm.controls['audioFileUri']?.value || ''"
+                />
+                <button mat-icon-button matSuffix (click)="fileInput.click()" type="button">
+                  <mat-icon>upload_file</mat-icon>
+                </button>
               </mat-form-field>
             }
           </form>

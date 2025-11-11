@@ -96,7 +96,21 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
   @Input()
   set scenario(value: ScenarioData | null) {
-    this._scenario = value;
+    if (value) {
+      this._scenario = structuredClone(value);
+      this._internalScenario = structuredClone(value);
+
+      const allIds = [
+        ...this._internalScenario.emitters.map((e) => e.id),
+        ...this._internalScenario.listeners.map((l) => l.id),
+      ];
+      this._idCounter = allIds.length ? Math.max(...allIds) + 1 : 0;
+
+      setTimeout(() => {
+        this._internalScenario.emitters.forEach((e) => this.addExistingEmitter(e));
+        this._internalScenario.listeners.forEach((l) => this.addExistingListener(l));
+      });
+    }
   }
 
   get scenario(): ScenarioData | null {
@@ -130,7 +144,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
   editMode = false;
   editForm: FormGroup | null = null;
-  private editClone: DesignedObject | null = null;
+  editClone: DesignedObject | null = null;
   private editingOriginal: DesignedObject | null = null;
   private editFormSub: Subscription | null = null;
 
@@ -623,18 +637,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   enterEditMode() {
-    if (!this.selectedObject || !this.scene) {
-      return;
-    }
-    if (this.editMode) {
-      return;
-    }
-
-    if (this.preObjectPosition && this.preObjectMesh) {
-      this.scene.remove(this.preObjectMesh);
-      this.preObjectMesh = null;
-      this.preObjectPosition = null;
-    }
+    if (!this.selectedObject || !this.scene || this.editMode) return;
 
     const original = this.selectedObject;
     this.editingOriginal = original;
@@ -644,16 +647,19 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
     const clone = this.cloneDesignedObject(original);
     this.editClone = clone;
-
     this.scene.add(clone.displayMesh);
 
-    const height = original.data.position.y;
-    const rotationDeg =
-      original.type === 'listener' ? THREE.MathUtils.radToDeg(clone.displayMesh.rotation.y) : 0;
+    const formConfig: any = {
+      height: new FormControl(original.data.position.y, { nonNullable: true }),
+    };
 
-    const formConfig: any = { height: new FormControl<number>(height, { nonNullable: true }) };
     if (original.type === 'listener') {
-      formConfig.rotation = new FormControl<number>(rotationDeg, { nonNullable: true });
+      const rotationDeg = THREE.MathUtils.radToDeg(original.displayMesh.rotation.y);
+      formConfig.rotation = new FormControl(rotationDeg, { nonNullable: true });
+    }
+
+    if (original.type === 'emitter') {
+      formConfig.audioFileUri = new FormControl(original.data.audioFileUri || null);
     }
 
     this.editForm = new FormGroup(formConfig);
@@ -666,8 +672,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
         d.displayMesh.position.y = values.height;
       }
       if (d.type === 'listener' && typeof values.rotation === 'number') {
-        const rotRad = THREE.MathUtils.degToRad(values.rotation);
-        d.displayMesh.rotation.y = rotRad;
+        d.displayMesh.rotation.y = THREE.MathUtils.degToRad(values.rotation);
+      }
+      if (d.type === 'emitter' && typeof values.audioFileUri === 'string') {
+        d.data.audioFileUri = values.audioFileUri;
       }
     });
   }
@@ -750,5 +758,19 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       markObjectAsEdited(listener);
       return listener;
     }
+  }
+
+  private addExistingEmitter(emitter: EmitterData) {
+    if (!this.scene) return;
+    const designedEmitter = createEmitterDisplay(emitter);
+    this.scene.add(designedEmitter.displayMesh);
+    this.emitterDisplays.set(emitter.id, designedEmitter);
+  }
+
+  private addExistingListener(listener: ListenerData) {
+    if (!this.scene) return;
+    const designedListener = createListenerDisplay(listener);
+    this.scene.add(designedListener.displayMesh);
+    this.listenerDisplays.set(listener.id, designedListener);
   }
 }
