@@ -13,6 +13,7 @@ import { AuthApiService } from 'core/services/auth/auth-api.service';
 import { AuthService } from 'core/services/auth/auth.service';
 import { Subject, takeUntil } from 'rxjs';
 import { RoutePaths } from 'app/app.router-path';
+import { AppConfigService } from 'core/services/config/app-config.service';
 
 @Component({
   selector: 'app-auth',
@@ -37,6 +38,7 @@ export class AuthComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject();
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
+  private appConfigService = inject(AppConfigService);
 
   form = this.fb.nonNullable.group({
     login: ['', Validators.required],
@@ -50,10 +52,22 @@ export class AuthComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    this.authService.logout();
+    this.authService.checkAuth().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (isAuthenticated) => {
+        if (isAuthenticated) {
+          this.router.navigate(['/']).then();
+        } else {
+          this.authService.logout().subscribe();
+        }
+      },
+      error: () => {
+        this.authService.logout().subscribe();
+      }
+    });
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next(null);
     this.destroy$.complete();
   }
 
@@ -79,8 +93,13 @@ export class AuthComponent implements OnInit, OnDestroy {
       });
   }
 
+  loginWithGoogle(): void {
+    this.loading = true;
+    const oauthStartUrl = `${this.appConfigService.config?.apiUrl ?? ''}/api/v1/auth/oauth2/start`;
+    window.location.assign(oauthStartUrl);
+  }
+
   goToSignUp() {
     this.router.navigate([`/${RoutePaths.SignUp}`]);
   }
 }
-

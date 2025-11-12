@@ -6,7 +6,9 @@
       <mat-form-field appearance="fill" class="auth-field">
         <mat-label>Login</mat-label>
         <input matInput autocomplete="off" formControlName="login" />
-        <mat-error *ngIf="form.get('login')?.invalid">Enter your login</mat-error>
+        @if (form.get('login')?.invalid) {
+          <mat-error>Enter your login</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="fill" class="auth-field">
@@ -26,7 +28,9 @@
         >
           <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
-        <mat-error *ngIf="form.get('password')?.invalid">Enter your password</mat-error>
+        @if (form.get('password')?.invalid) {
+          <mat-error>Enter your password</mat-error>
+        }
       </mat-form-field>
 
       <button
@@ -39,6 +43,18 @@
         Log In
       </button>
 
+      <div class="auth-divider">OR</div>
+
+      <button
+        mat-raised-button
+        class="google-auth-button"
+        (click)="loginWithGoogle()"
+        [disabled]="loading"
+      >
+        <mat-icon>lock</mat-icon>
+        Log in with Google
+      </button>
+
       <div class="auth-sign-up-link">
         Don't have an account?
         <a (click)="goToSignUp()">Sign up here</a>
@@ -46,4 +62,3 @@
     </form>
   </mat-card>
 </div>
-
