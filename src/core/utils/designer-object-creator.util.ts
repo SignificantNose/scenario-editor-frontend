@@ -14,7 +14,12 @@ import {
   LISTENER_POLE_COLOR,
 } from '@models/designer/designer.model';
 import { EmitterData, ListenerData } from '@models/scenario/list-scenario-data.model';
-import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
+import {
+  ListenerConeAngleDeg,
+  ListenerConeHeightMeters,
+  MinEmitterHeightMeters,
+  MinListenerHeightMeters,
+} from 'core/const/scenario.const';
 import * as THREE from 'three';
 
 export function createEmitterDisplay(emitterData: EmitterData) {
@@ -122,13 +127,14 @@ export function createListenerDisplay(listenerData: ListenerData) {
   const coneMaterial = new THREE.MeshBasicMaterial({
     color: LISTENER_COLOR,
     transparent: true,
-    opacity: 0.25,
+    opacity: 0.03,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
 
-  const coneHeight = 0.6;
-  const coneGeom = new THREE.ConeGeometry(0.15, coneHeight, 16, 1, true);
+  const coneHeight = ListenerConeHeightMeters;
+  const coneRadius = coneHeight * Math.tan(((ListenerConeAngleDeg / 2) * Math.PI) / 180);
+  const coneGeom = new THREE.ConeGeometry(coneRadius, coneHeight, 16, 1, true);
 
   const coneLeft = new THREE.Mesh(coneGeom, coneMaterial.clone());
   coneLeft.rotation.x = Math.PI / 2;
@@ -167,14 +173,22 @@ export function createListenerDisplay(listenerData: ListenerData) {
     }
   });
 
+  hideListenerCones(designedListener);
+
   return designedListener;
 }
 
 export function markObjectAsEdited(obj: DesignedObject): void {
   const meshes = Object.values(obj.display);
 
+  const coneMeshes = obj.type === 'listener' ? [obj.display.coneLeft, obj.display.coneRight] : [];
+
   for (const mesh of meshes) {
     if (!(mesh instanceof THREE.Mesh)) continue;
+
+    if (coneMeshes.includes(mesh)) {
+      continue;
+    }
 
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
 
@@ -254,6 +268,16 @@ export function updateDesignedObjectTransform(
   }
 }
 
+export function showListenerCones(listener: DesignedListener) {
+  listener.display.coneLeft.visible = true;
+  listener.display.coneRight.visible = true;
+}
+
+export function hideListenerCones(listener: DesignedListener) {
+  listener.display.coneLeft.visible = false;
+  listener.display.coneRight.visible = false;
+}
+
 function updateEmitterTransform(
   emitter: DesignedEmitter,
   changes: Partial<{ height: number; audioFileUri: string }>,
@@ -288,7 +312,7 @@ function updateListenerTransform(
     d.micLeft.position.y = height;
     d.micRight.position.y = height;
 
-    const coneHeight = 0.6;
+    const coneHeight = ListenerConeHeightMeters;
     d.coneLeft.position.y = height;
     d.coneLeft.position.z = d.micLeft.position.z - coneHeight / 2;
     d.coneRight.position.y = height;

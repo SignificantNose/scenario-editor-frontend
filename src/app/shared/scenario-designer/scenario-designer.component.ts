@@ -29,9 +29,11 @@ import {
   createEmitterDisplay,
   createListenerDisplay,
   getClickableParts,
+  hideListenerCones,
   highlightDesignedObject,
   markObjectAsEdited,
   restoreDefaultColors,
+  showListenerCones,
 } from 'core/utils/designer-object-creator.util';
 import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
 import { EmitterEditorComponent } from './components/emitter-editor/emitter-editor.component';
@@ -492,6 +494,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
     const obj = this.selectedObject;
     restoreDefaultColors(obj);
+
+    if (obj.type === 'listener') {
+      hideListenerCones(obj);
+    }
     this.selectedObject = null;
   }
 
@@ -519,6 +525,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     if (found) {
       this.clearSelectedObject();
       this.highlightSelectedObject(found);
+
+      if (found.type === 'listener') {
+        showListenerCones(found);
+      }
       this.selectedObject = found;
       return true;
     }
@@ -637,6 +647,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     this.scene.remove(this.selectedObject.displayMesh);
     const clone = this.cloneDesignedObject(this.selectedObject);
     this.selectedObject = clone;
+
+    if(clone.type == 'listener'){
+      showListenerCones(clone);
+    }
     this.scene.add(clone.displayMesh);
   }
 
