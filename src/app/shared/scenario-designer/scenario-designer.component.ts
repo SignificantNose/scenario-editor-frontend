@@ -18,8 +18,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ScenarioNameRegex } from 'app/const/app.defaults';
-import { debounceTime, Subject, Subscription, takeUntil } from 'rxjs';
-import { AudioFileService } from 'core/services/audio/audio-file.service';
+import { Subject, takeUntil } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -34,7 +33,10 @@ import {
   markObjectAsEdited,
   restoreDefaultColors,
 } from 'core/utils/designer-object-creator.util';
-import { MinEmitterHeightMeters } from 'core/const/scenario.const';
+import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
+import { EmitterEditorComponent } from './components/emitter-editor/emitter-editor.component';
+import { ListenerEditorComponent } from './components/listener-editor/listener-editor.component';
+import { DesignedObjectInfoComponent } from './components/designed-object-info/designed-object-info.component';
 
 @Component({
   selector: 'app-scenario-designer',
@@ -48,6 +50,9 @@ import { MinEmitterHeightMeters } from 'core/const/scenario.const';
     FormsModule,
     MatButtonModule,
     MatIconModule,
+    EmitterEditorComponent,
+    ListenerEditorComponent,
+    DesignedObjectInfoComponent,
   ],
   standalone: true,
 })
@@ -106,6 +111,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       ];
       this._idCounter = allIds.length ? Math.max(...allIds) + 1 : 0;
 
+      this.form.patchValue(value);
+
       setTimeout(() => {
         this._internalScenario.emitters.forEach((e) => this.addExistingEmitter(e));
         this._internalScenario.listeners.forEach((l) => this.addExistingListener(l));
@@ -143,15 +150,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   private _idCounter = 0;
 
   editMode = false;
-  editForm: FormGroup | null = null;
-  editClone: DesignedObject | null = null;
-  private editingOriginal: DesignedObject | null = null;
-  private editFormSub: Subscription | null = null;
 
-  constructor(
-    private ngZone: NgZone,
-    private audioFileService: AudioFileService,
-  ) { }
+  constructor(private ngZone: NgZone) { }
 
   ngOnInit() {
     this.isValid = this.form.valid;
@@ -283,9 +283,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       id,
       position: {
         x: this.preObjectPosition.x,
-        y: 0,
+        y: MinListenerHeightMeters,
         z: this.preObjectPosition.z,
       },
+      rotation: 0,
     };
     this._internalScenario.listeners.push(listener);
 
@@ -299,28 +300,6 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     this.preObjectPosition = null;
   }
 
-  onAudioSelected(event: Event, emitter: EmitterData) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) {
-      return;
-    }
-    const file = input.files[0];
-    if (!file.type.startsWith('audio/')) {
-      alert('Please select an audio file');
-      return;
-    }
-
-    this.audioFileService.uploadAudio(file).subscribe({
-      next: (result) => {
-        emitter.audioFileUri = result.uri;
-      },
-      error: (err) => {
-        console.error('Upload failed', err);
-        alert('File upload failed');
-      },
-    });
-  }
-
   deleteSelected() {
     if (!this.selectedObject || !this.scene) {
       return;
@@ -328,14 +307,13 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
     const { displayMesh, type, data } = this.selectedObject;
 
+    this.scene.remove(displayMesh);
     if (type === 'emitter') {
-      this.scene.remove(displayMesh);
       this.emitterDisplays.delete(data.id);
       this._internalScenario.emitters = this._internalScenario.emitters.filter(
         (e) => e.id !== data.id,
       );
     } else {
-      this.scene.remove(displayMesh);
       this.listenerDisplays.delete(data.id);
       this._internalScenario.listeners = this._internalScenario.listeners.filter(
         (l) => l.id !== data.id,
@@ -411,13 +389,17 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private onMouseUp(event?: MouseEvent) {
-    if (event) event.preventDefault();
+    if (event) {
+      event.preventDefault();
+    }
     if (!this.isDragging && this.isMouseDown && !this.mouseLeftCanvas && event) {
-      if (this.editMode) {
+      if (this.editMode && this.selectedObject) {
         this.moveEditedObjectOnClick(event);
       } else {
         const clickedOnObject = this.handleObjectSelection(event);
-        if (!clickedOnObject) this.handleGroundClick(event);
+        if (!clickedOnObject) {
+          this.handleGroundClick(event);
+        }
       }
     }
     this.isMouseDown = false;
@@ -470,7 +452,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private moveEditedObjectOnClick(event: MouseEvent) {
-    if (!this.editClone || !this.camera || !this.ground) return;
+    // in edit mode, selectedObject is the edited object
+    if (!this.selectedObject || !this.camera || !this.ground) {
+      return;
+    }
 
     const normalizedMouse = this.getNormalizedMouse(event);
     this.raycaster.setFromCamera(normalizedMouse, this.camera);
@@ -479,10 +464,10 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     if (intersects.length === 0) return;
 
     const point = intersects[0].point;
-    const d = this.editClone.data;
-    d.position.x = point.x;
-    d.position.z = point.z;
-    this.editClone.displayMesh.position.set(point.x, d.position.y, point.z);
+    this.selectedObject.data.position.x = point.x;
+    this.selectedObject.data.position.z = point.z;
+    this.selectedObject.displayMesh.position.setX(point.x);
+    this.selectedObject.displayMesh.position.setZ(point.z);
   }
 
   private getNormalizedMouse(event: MouseEvent) {
@@ -637,115 +622,98 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   enterEditMode() {
-    if (!this.selectedObject || !this.scene || this.editMode) return;
+    if (!this.selectedObject || this.editMode || !this.scene) {
+      return;
+    }
 
-    const original = this.selectedObject;
-    this.editingOriginal = original;
     this.editMode = true;
 
-    this.setDesignedObjectVisibility(original, false);
+    if (this.preObjectMesh && this.preObjectPosition) {
+      this.scene.remove(this.preObjectMesh);
+      this.preObjectMesh = null;
+      this.preObjectPosition = null;
+    }
 
-    const clone = this.cloneDesignedObject(original);
-    this.editClone = clone;
+    this.scene.remove(this.selectedObject.displayMesh);
+    const clone = this.cloneDesignedObject(this.selectedObject);
+    this.selectedObject = clone;
     this.scene.add(clone.displayMesh);
-
-    const formConfig: any = {
-      height: new FormControl(original.data.position.y, { nonNullable: true }),
-    };
-
-    if (original.type === 'listener') {
-      const rotationDeg = THREE.MathUtils.radToDeg(original.displayMesh.rotation.y);
-      formConfig.rotation = new FormControl(rotationDeg, { nonNullable: true });
-    }
-
-    if (original.type === 'emitter') {
-      formConfig.audioFileUri = new FormControl(original.data.audioFileUri || null);
-    }
-
-    this.editForm = new FormGroup(formConfig);
-
-    this.editFormSub = this.editForm.valueChanges.pipe(debounceTime(100)).subscribe((values) => {
-      if (!this.editClone) return;
-      const d = this.editClone;
-      if (typeof values.height === 'number') {
-        d.data.position.y = values.height;
-        d.displayMesh.position.y = values.height;
-      }
-      if (d.type === 'listener' && typeof values.rotation === 'number') {
-        d.displayMesh.rotation.y = THREE.MathUtils.degToRad(values.rotation);
-      }
-      if (d.type === 'emitter' && typeof values.audioFileUri === 'string') {
-        d.data.audioFileUri = values.audioFileUri;
-      }
-    });
   }
 
-  exitEditMode(save = false) {
-    if (!this.editMode || !this.editingOriginal) return;
-
-    const original = this.editingOriginal;
-    const clone = this.editClone;
-
-    if (this.scene && clone) {
-      this.scene.remove(clone.displayMesh);
+  onEditorSave(editedData: EmitterData | ListenerData) {
+    if (!this.selectedObject || !this.scene) {
+      return;
     }
 
-    if (save && clone && this.scene) {
-      this.scene.remove(original.displayMesh);
+    this.scene.remove(this.selectedObject.displayMesh);
 
-      if (clone.type !== original.type) {
-        console.error('Edited object and clone object have different types');
+    if (this.selectedObject.type === 'emitter') {
+      const originalEmitterIndex = this._internalScenario.emitters.findIndex(
+        (e) => e.id === editedData.id,
+      );
+      if (originalEmitterIndex !== -1) {
+        this._internalScenario.emitters[originalEmitterIndex] = editedData as EmitterData;
+      }
+      this.emitterDisplays.delete(editedData.id);
+      const recreated = createEmitterDisplay(editedData as EmitterData);
+      this.emitterDisplays.set(recreated.data.id, recreated);
+      this.scene.add(recreated.displayMesh);
+      this.selectedObject = recreated;
+    } else {
+      const originalListenerIndex = this._internalScenario.listeners.findIndex(
+        (l) => l.id === editedData.id,
+      );
+      if (originalListenerIndex !== -1) {
+        this._internalScenario.listeners[originalListenerIndex] = editedData as ListenerData;
+      }
+      this.listenerDisplays.delete(editedData.id);
+      const recreated = createListenerDisplay(editedData as ListenerData);
+      this.listenerDisplays.set(recreated.data.id, recreated);
+      this.scene.add(recreated.displayMesh);
+      this.selectedObject = null;
+    }
+
+    this.exitEditMode();
+  }
+
+  onEditorCancel() {
+    const editedClone = this.selectedObject;
+    if (!editedClone || !this.scene) {
+      return;
+    }
+
+    let recreated: DesignedObject | undefined;
+    if (editedClone.type === 'emitter') {
+      const originalEmitter = this._internalScenario.emitters.find(
+        (e) => e.id === editedClone.data.id,
+      );
+      if (!originalEmitter) {
         return;
       }
-
-      if (clone.type === 'emitter') {
-        this._internalScenario.emitters = this._internalScenario.emitters.filter(
-          (e) => e.id !== original.data.id,
-        );
-        this.emitterDisplays.delete(original.data.id);
-
-        const recreated = createEmitterDisplay(structuredClone(clone.data));
-        this._internalScenario.emitters.push(recreated.data);
-        this.emitterDisplays.set(recreated.data.id, recreated);
-        this.scene.add(recreated.displayMesh);
-        this.selectedObject = recreated;
-      } else {
-        this._internalScenario.listeners = this._internalScenario.listeners.filter(
-          (l) => l.id !== original.data.id,
-        );
-        this.listenerDisplays.delete(original.data.id);
-
-        const recreated = createListenerDisplay(structuredClone(clone.data));
-        this._internalScenario.listeners.push(recreated.data);
-        this.listenerDisplays.set(recreated.data.id, recreated);
-        this.scene.add(recreated.displayMesh);
-        this.selectedObject = recreated;
-      }
+      recreated = createEmitterDisplay(originalEmitter);
+      this.emitterDisplays.set(recreated.data.id, recreated);
     } else {
-      this.setDesignedObjectVisibility(original, true);
-      this.selectedObject = original;
+      const originalListener = this._internalScenario.listeners.find(
+        (l) => l.id === editedClone.data.id,
+      );
+      if (!originalListener) {
+        return;
+      }
+      recreated = createListenerDisplay(originalListener);
+      this.listenerDisplays.set(recreated.data.id, recreated);
     }
 
+    this.scene.add(recreated.displayMesh);
+    this.selectedObject = null;
+
+    this.scene.remove(editedClone.displayMesh);
+    this.exitEditMode();
+  }
+
+  onObjectTransformChanged() { }
+
+  private exitEditMode() {
     this.editMode = false;
-    this.editingOriginal = null;
-    this.editClone = null;
-    this.editFormSub?.unsubscribe();
-    this.editForm = null;
-  }
-
-  private setDesignedObjectVisibility(obj: DesignedObject, visible: boolean) {
-    for (const mesh of this.getAllMeshes(obj)) {
-      mesh.visible = visible;
-    }
-  }
-
-  private getAllMeshes(obj: DesignedObject): THREE.Mesh[] {
-    const meshes: THREE.Mesh[] = [];
-    for (const key in obj.display) {
-      const value = (obj.display as any)[key];
-      if (value instanceof THREE.Mesh) meshes.push(value);
-    }
-    return meshes;
   }
 
   private cloneDesignedObject(obj: DesignedObject): DesignedObject {
@@ -761,14 +729,18 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   private addExistingEmitter(emitter: EmitterData) {
-    if (!this.scene) return;
+    if (!this.scene) {
+      return;
+    }
     const designedEmitter = createEmitterDisplay(emitter);
     this.scene.add(designedEmitter.displayMesh);
     this.emitterDisplays.set(emitter.id, designedEmitter);
   }
 
   private addExistingListener(listener: ListenerData) {
-    if (!this.scene) return;
+    if (!this.scene) {
+      return;
+    }
     const designedListener = createListenerDisplay(listener);
     this.scene.add(designedListener.displayMesh);
     this.listenerDisplays.set(listener.id, designedListener);

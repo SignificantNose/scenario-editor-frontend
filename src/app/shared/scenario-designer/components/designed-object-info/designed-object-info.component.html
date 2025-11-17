@@ -1,0 +1,28 @@
+@if (selectedObject) {
+  <mat-card class="info-panel">
+    <h3 class="info-panel-title">
+      Selected {{ selectedObject.type === 'emitter' ? 'Emitter' : 'Listener' }}
+    </h3>
+
+    <p>
+      Position: X: {{ selectedObject.data.position.x.toFixed(2) }}, Y:
+      {{ selectedObject.data.position.y.toFixed(2) }}, Z:
+      {{ selectedObject.data.position.z.toFixed(2) }}
+    </p>
+
+    @if (selectedObject.type === 'emitter') {
+      <p>Audio File: {{ selectedObject.data.audioFileUri || 'None' }}</p>
+    } @else if (selectedObject.type === 'listener') {
+      <p>Rotation: {{ selectedObject.data.rotation.toFixed(2) }}°</p>
+    }
+
+    @if (!editMode) {
+      <button mat-stroked-button color="warn" class="full-width" (click)="onDelete()">
+        Delete {{ selectedObject.type }}
+      </button>
+      <button mat-stroked-button color="primary" class="full-width" (click)="onEdit()">
+        Edit {{ selectedObject.type }}
+      </button>
+    }
+  </mat-card>
+}

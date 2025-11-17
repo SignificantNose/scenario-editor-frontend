@@ -17,6 +17,7 @@ export type ListenerData = v.InferOutput<typeof ListenerDataSchema>;
 export const ListenerDataSchema = v.object({
   id: v.number(),
   position: PositionDataSchema,
+  rotation: v.number(),
 });
 
 export type ScenarioData = v.InferOutput<typeof ScenarioDataSchema>;

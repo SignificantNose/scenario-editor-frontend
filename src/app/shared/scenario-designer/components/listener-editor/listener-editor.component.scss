@@ -1,0 +1,29 @@
+.edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.mat-stroked-button {
+  flex: 1;
+}

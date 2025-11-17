@@ -1,0 +1,35 @@
+@if (editForm) {
+  <mat-card class="edit-panel">
+    <h3>Edit Emitter</h3>
+
+    <form [formGroup]="editForm">
+      <mat-form-field appearance="fill" class="full-width">
+        <mat-label>Height (Y)</mat-label>
+        <input matInput type="number" formControlName="height" />
+        @if (editForm.controls['height'].hasError('min')) {
+          <mat-error> Must be ≥ {{ minEmitterHeightMeters }} </mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="fill" class="full-width file-upload-field">
+        <mat-label>Audio File</mat-label>
+        <input type="file" accept="audio/*" hidden #fileInput (change)="onAudioSelected($event)" />
+        <input
+          matInput
+          [readonly]="true"
+          [value]="editForm.controls['audioFileUri']?.value || ''"
+        />
+        <button mat-icon-button matSuffix (click)="fileInput.click()" type="button">
+          <mat-icon>upload_file</mat-icon>
+        </button>
+      </mat-form-field>
+    </form>
+
+    <div class="edit-actions">
+      <button mat-stroked-button color="primary" (click)="onSave()" [disabled]="!editForm.valid">
+        Save
+      </button>
+      <button mat-stroked-button color="warn" (click)="onCancel()">Cancel</button>
+    </div>
+  </mat-card>
+}

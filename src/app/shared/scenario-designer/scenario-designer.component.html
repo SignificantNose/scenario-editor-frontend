@@ -23,95 +23,29 @@
     }
 
     @if (selectedObject) {
-      <div class="info-panel">
-        <h3 class="info-panel-title">
-          Selected {{ selectedObject.type === 'emitter' ? 'Emitter' : 'Listener' }}
-        </h3>
+      @if (!editMode) {
+        <app-designed-object-info
+          [selectedObject]="selectedObject"
+          [editMode]="editMode"
+          (delete)="deleteSelected()"
+          (edit)="enterEditMode()"
+        ></app-designed-object-info>
+      }
 
-        <p>
-          Position: X: {{ selectedObject.data.position.x.toFixed(2) }}, Y:
-          {{ selectedObject.data.position.y.toFixed(2) }}, Z:
-          {{ selectedObject.data.position.z.toFixed(2) }}
-        </p>
-
-        @if (selectedObject.type === 'emitter') {
-          <p>Audio File: {{ selectedObject.data.audioFileUri || 'None' }}</p>
-        }
-
-        <button
-          mat-stroked-button
-          color="warn"
-          class="full-width"
-          (click)="deleteSelected()"
-          [disabled]="editMode"
-        >
-          Delete {{ selectedObject.type }}
-        </button>
-
-        @if (!editMode) {
-          <button mat-stroked-button color="primary" class="full-width" (click)="enterEditMode()">
-            Edit {{ selectedObject.type }}
-          </button>
-        }
-      </div>
-
-      @if (editMode && editForm && editClone) {
-        <div class="edit-panel">
-          <h3>Edit {{ selectedObject.type }}</h3>
-
-          <form [formGroup]="editForm">
-            <mat-form-field appearance="fill" class="full-width">
-              <mat-label>Height (Y)</mat-label>
-              <input matInput type="number" formControlName="height" />
-              @if (editForm.controls['height'].hasError('min')) {
-                <mat-error> Must be ≥ 0.1 </mat-error>
-              }
-            </mat-form-field>
-
-            @if (editClone.type === 'listener') {
-              <mat-form-field appearance="fill" class="full-width">
-                <mat-label>Rotation (°)</mat-label>
-                <input matInput type="number" formControlName="rotation" />
-                @if (editForm.controls['rotation'].hasError('min')) {
-                  <mat-error> -180° to 180° allowed </mat-error>
-                }
-              </mat-form-field>
-            }
-
-            @if (editClone.type === 'emitter') {
-              <mat-form-field appearance="fill" class="full-width file-upload-field">
-                <mat-label>Audio File</mat-label>
-                <input
-                  type="file"
-                  accept="audio/*"
-                  hidden
-                  #fileInput
-                  (change)="onAudioSelected($event, editClone.data)"
-                />
-                <input
-                  matInput
-                  [readonly]="true"
-                  [value]="editForm.controls['audioFileUri']?.value || ''"
-                />
-                <button mat-icon-button matSuffix (click)="fileInput.click()" type="button">
-                  <mat-icon>upload_file</mat-icon>
-                </button>
-              </mat-form-field>
-            }
-          </form>
-
-          <div class="edit-actions">
-            <button
-              mat-stroked-button
-              color="primary"
-              (click)="exitEditMode(true)"
-              [disabled]="!editForm.valid"
-            >
-              Save
-            </button>
-            <button mat-stroked-button color="warn" (click)="exitEditMode(false)">Cancel</button>
-          </div>
-        </div>
+      @if (editMode && selectedObject.type === 'emitter') {
+        <app-emitter-editor
+          [designedEmitter]="selectedObject"
+          (save)="onEditorSave($event)"
+          (cancel)="onEditorCancel()"
+          (objectTransformChanged)="onObjectTransformChanged()"
+        ></app-emitter-editor>
+      } @else if (editMode && selectedObject.type === 'listener') {
+        <app-listener-editor
+          [designedListener]="selectedObject"
+          (save)="onEditorSave($event)"
+          (cancel)="onEditorCancel()"
+          (objectTransformChanged)="onObjectTransformChanged()"
+        ></app-listener-editor>
       }
     }
   </mat-card>

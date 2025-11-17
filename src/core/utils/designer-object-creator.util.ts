@@ -14,70 +14,53 @@ import {
   LISTENER_POLE_COLOR,
 } from '@models/designer/designer.model';
 import { EmitterData, ListenerData } from '@models/scenario/list-scenario-data.model';
+import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
 import * as THREE from 'three';
 
 export function createEmitterDisplay(emitterData: EmitterData) {
   const group = new THREE.Group();
 
-  // Fuselage: 0.6 m long, 0.1 m diameter
   const fuselage = new THREE.Mesh(
     new THREE.CylinderGeometry(0.05, 0.05, 0.6, 16),
-    new THREE.MeshBasicMaterial({ color: EMITTER_FUSELAGE_COLOR})
+    new THREE.MeshBasicMaterial({ color: EMITTER_FUSELAGE_COLOR }),
   );
-  fuselage.rotation.z = Math.PI / 2; // Aligns along X-axis
+  fuselage.rotation.z = Math.PI / 2;
   group.add(fuselage);
 
-  // Nose cone: 0.1 m long, 0.05 radius
   const nose = new THREE.Mesh(
     new THREE.ConeGeometry(0.05, 0.1, 16),
-    new THREE.MeshBasicMaterial({ color: EMITTER_NOSE_COLOR })
+    new THREE.MeshBasicMaterial({ color: EMITTER_NOSE_COLOR }),
   );
-  nose.rotation.z = -Math.PI / 2; // Points along positive X-axis
-  nose.position.x = 0.35; // front of fuselage
+  nose.rotation.z = -Math.PI / 2;
+  nose.position.x = 0.35;
   group.add(nose);
 
-  // Wings: 0.3 m wide, 0.02 thick, 0.15 m deep
   const wings = new THREE.Mesh(
     new THREE.BoxGeometry(0.3, 0.02, 0.15),
-    new THREE.MeshBasicMaterial({ color: EMITTER_WINGS_COLOR })
+    new THREE.MeshBasicMaterial({ color: EMITTER_WINGS_COLOR }),
   );
-  // Initial BoxGeometry is (width, height, depth) along X, Y, Z respectively.
-  // We want the 0.3 (width) to be the span along Z, 0.15 (depth) to be along X, and 0.02 (height) to be along Y (thickness).
-  // No rotation is needed if we assume XZ plane for horizontal surfaces and Y for height.
-  // Let's adjust dimensions to match typical (span, thickness, chord)
+
   const wingSpan = 0.3;
   const wingThickness = 0.02;
-  const wingChord = 0.15; // Depth of the wing from front to back
-  wings.geometry = new THREE.BoxGeometry(wingChord, wingThickness, wingSpan); // (X=chord, Y=thickness, Z=span)
-  wings.position.set(0, 0, 0); // center on fuselage
+  const wingChord = 0.15;
+  wings.geometry = new THREE.BoxGeometry(wingChord, wingThickness, wingSpan);
+  wings.position.set(0, 0, 0);
   group.add(wings);
 
-
-  // Tail horizontal stabilizer: 0.15 m wide, 0.02 thick, 0.05 m deep
   const tailHor = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, 0.02, 0.15), // (X=chord, Y=thickness, Z=span)
-    new THREE.MeshBasicMaterial({ color: EMITTER_TAIL_HOR_COLOR })
+    new THREE.BoxGeometry(0.05, 0.02, 0.15),
+    new THREE.MeshBasicMaterial({ color: EMITTER_TAIL_HOR_COLOR }),
   );
-  tailHor.position.set(-0.3, 0, 0); // back of fuselage
+  tailHor.position.set(-0.3, 0, 0);
   group.add(tailHor);
 
-  // Tail vertical fin: 0.02 thick, 0.05 m wide, 0.1 m tall
   const tailVer = new THREE.Mesh(
-    new THREE.BoxGeometry(0.02, 0.1, 0.05), // dimensions: (X=thickness, Y=height, Z=width of fin)
-    new THREE.MeshBasicMaterial({ color: EMITTER_TAIL_VER_COLOR })
+    new THREE.BoxGeometry(0.02, 0.1, 0.05),
+    new THREE.MeshBasicMaterial({ color: EMITTER_TAIL_VER_COLOR }),
   );
-  tailVer.position.set(-0.3, 0.05, 0); // Position above the horizontal tail
+  tailVer.position.set(-0.3, 0.05, 0);
   group.add(tailVer);
 
-  // Removed the stand as requested
-  // const stand = new THREE.Mesh(
-  //   new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8),
-  //   new THREE.MeshBasicMaterial({ color: EMITTER_STAND_COLOR })
-  // );
-  // stand.position.set(0, -0.15 - 0.05, 0);
-  // group.add(stand);
-
-  // position group at emitter position
   group.position.set(emitterData.position.x, emitterData.position.y, emitterData.position.z);
 
   const designedEmitter: DesignedEmitter = {
@@ -87,14 +70,12 @@ export function createEmitterDisplay(emitterData: EmitterData) {
     display: {
       fuselage,
       wings,
-      tailHor, // Referencing the correct tail part
-      tailVer, // Including the vertical tail
+      tailHor,
+      tailVer,
       nose,
-      // stand, // Removed from display
     },
   };
 
-  // Assign userData for selection
   Object.values(designedEmitter.display).forEach((mesh) => {
     if (mesh instanceof THREE.Mesh) {
       mesh.userData['designedObject'] = designedEmitter;
@@ -107,18 +88,20 @@ export function createEmitterDisplay(emitterData: EmitterData) {
 export function createListenerDisplay(listenerData: ListenerData) {
   const group = new THREE.Group();
 
+  const baseHeight = 0.1;
   const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16),
+    new THREE.CylinderGeometry(0.15, 0.15, baseHeight, 16),
     new THREE.MeshBasicMaterial({ color: LISTENER_BASE_COLOR }),
   );
-  base.position.y = 0.05;
+  base.position.y = baseHeight / 2;
   group.add(base);
 
+  const poleHeight = listenerData.position.y;
   const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.03, 0.03, 1, 16),
+    new THREE.CylinderGeometry(0.03, 0.03, poleHeight, 16),
     new THREE.MeshBasicMaterial({ color: LISTENER_POLE_COLOR }),
   );
-  pole.position.y = 0.55;
+  pole.position.y = poleHeight / 2;
   group.add(pole);
 
   const rail = new THREE.Mesh(
@@ -126,14 +109,14 @@ export function createListenerDisplay(listenerData: ListenerData) {
     new THREE.MeshBasicMaterial({ color: LISTENER_COLOR }),
   );
   rail.rotation.z = Math.PI / 2;
-  rail.position.y = 1.05;
+  rail.position.y = poleHeight;
   group.add(rail);
 
   const micGeom = new THREE.SphereGeometry(0.05, 16, 16);
   const micLeft = new THREE.Mesh(micGeom, new THREE.MeshBasicMaterial({ color: LISTENER_COLOR }));
   const micRight = new THREE.Mesh(micGeom, new THREE.MeshBasicMaterial({ color: LISTENER_COLOR }));
-  micLeft.position.set(-0.2, 1.05, 0);
-  micRight.position.set(0.2, 1.05, 0);
+  micLeft.position.set(-0.2, poleHeight, 0);
+  micRight.position.set(0.2, poleHeight, 0);
   group.add(micLeft, micRight);
 
   const coneMaterial = new THREE.MeshBasicMaterial({
@@ -159,7 +142,9 @@ export function createListenerDisplay(listenerData: ListenerData) {
   coneRight.position.z -= coneHeight / 2;
   group.add(coneRight);
 
-  group.position.set(listenerData.position.x, listenerData.position.y, listenerData.position.z);
+  group.position.set(listenerData.position.x, 0, listenerData.position.z);
+
+  group.rotation.y = THREE.MathUtils.degToRad(listenerData.rotation);
 
   const designedListener: DesignedListener = {
     type: 'listener',
@@ -255,5 +240,64 @@ export function getClickableParts(designedObject: DesignedObject) {
   } else {
     const d = designedObject.display;
     return [d.base, d.pole, d.rail, d.micLeft, d.micRight];
+  }
+}
+
+export function updateDesignedObjectTransform(
+  obj: DesignedObject,
+  changes: Partial<{ height: number; rotation: number; audioFileUri: string }>,
+): void {
+  if (obj.type === 'emitter') {
+    updateEmitterTransform(obj, changes);
+  } else {
+    updateListenerTransform(obj, changes);
+  }
+}
+
+function updateEmitterTransform(
+  emitter: DesignedEmitter,
+  changes: Partial<{ height: number; audioFileUri: string }>,
+): void {
+  const { height, audioFileUri } = changes;
+
+  if (typeof height === 'number' && height >= MinEmitterHeightMeters) {
+    emitter.data.position.y = height;
+    emitter.displayMesh.position.y = height;
+  }
+
+  if (typeof audioFileUri === 'string') {
+    emitter.data.audioFileUri = audioFileUri;
+  }
+}
+
+function updateListenerTransform(
+  listener: DesignedListener,
+  changes: Partial<{ height: number; rotation: number }>,
+): void {
+  const { height, rotation } = changes;
+  const d = listener.display;
+
+  if (typeof height === 'number' && height >= MinListenerHeightMeters) {
+    listener.data.position.y = height;
+
+    d.pole.geometry.dispose();
+    d.pole.geometry = new THREE.CylinderGeometry(0.03, 0.03, height, 16);
+    d.pole.position.y = height / 2;
+
+    d.rail.position.y = height;
+    d.micLeft.position.y = height;
+    d.micRight.position.y = height;
+
+    const coneHeight = 0.6;
+    d.coneLeft.position.y = height;
+    d.coneLeft.position.z = d.micLeft.position.z - coneHeight / 2;
+    d.coneRight.position.y = height;
+    d.coneRight.position.z = d.micRight.position.z - coneHeight / 2;
+  }
+
+  if (typeof rotation === 'number') {
+    const normalized = ((rotation % 360) + 360) % 360;
+    listener.displayMesh.rotation.y = THREE.MathUtils.degToRad(normalized);
+    listener.data.rotation = normalized;
   }
 }

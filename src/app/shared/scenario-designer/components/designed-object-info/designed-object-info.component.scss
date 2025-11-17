@@ -1,0 +1,24 @@
+.info-panel {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.info-panel-title {
+  font-size: 1.1em;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--mat-sys-primary, #3f51b5);
+}
+
+p {
+  font-size: 0.9em;
+  color: var(--mat-sys-on-surface, #444);
+  margin: 0;
+}
+
+.full-width {
+  width: 100%;
+}

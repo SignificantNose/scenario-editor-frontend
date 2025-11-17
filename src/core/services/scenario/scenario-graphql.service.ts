@@ -34,6 +34,7 @@ export class ScenarioGraphqlService {
               listeners {
                 id
                 position { x y z }
+                rotation
               }
             }
           }
@@ -70,6 +71,7 @@ export class ScenarioGraphqlService {
               listeners {
                 id
                 position { x y z }
+                rotation
               }
             }
           }
