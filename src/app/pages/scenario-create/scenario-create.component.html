@@ -10,7 +10,7 @@
       mat-raised-button
       color="accent"
       class="create-button"
-      [disabled]="!designer.isValid"
+      [disabled]="!designer.isValid || designer.editMode"
       (click)="create()"
     >
       Create

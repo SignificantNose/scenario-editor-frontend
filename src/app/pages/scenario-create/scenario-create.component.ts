@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Subject, takeUntil } from 'rxjs';
 import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.service';
+import { ScenarioService } from 'core/services/scenario/scenario.service';
 
 @Component({
   selector: 'app-scenario-create',
@@ -17,7 +18,8 @@ import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.
 export class ScenarioCreateComponent implements OnDestroy {
   @ViewChild('designer') scenarioDesigner: ScenarioDesignerComponent | null = null;
   private $destroy = new Subject<void>();
-  private graphql = inject(ScenarioGraphqlService);
+  // private graphql = inject(ScenarioGraphqlService);
+  private scenarioService = inject(ScenarioService);
 
   constructor(
     private router: Router,
@@ -39,20 +41,7 @@ export class ScenarioCreateComponent implements OnDestroy {
     }
 
     const finalScenario = this.scenarioDesigner.getScenario();
-    this.graphql.createScenario(finalScenario).pipe(takeUntil(this.$destroy)).subscribe({
-        next: () => {
-          console.log('scenario saved!');
-          this.router.navigate(['/']);
-        },
-        error: (err) => {
-          console.error('error saving scenario:', err);
-        },
-      });
-
-    // this.scenarioService
-    //   .create(finalScenario)
-    //   .pipe(takeUntil(this.$destroy))
-    //   .subscribe({
+    // this.graphql.createScenario(finalScenario).pipe(takeUntil(this.$destroy)).subscribe({
     //     next: () => {
     //       console.log('scenario saved!');
     //       this.router.navigate(['/']);
@@ -61,5 +50,18 @@ export class ScenarioCreateComponent implements OnDestroy {
     //       console.error('error saving scenario:', err);
     //     },
     //   });
+
+    this.scenarioService
+      .create(finalScenario)
+      .pipe(takeUntil(this.$destroy))
+      .subscribe({
+        next: () => {
+          console.log('scenario saved!');
+          this.router.navigate(['/']);
+        },
+        error: (err) => {
+          console.error('error saving scenario:', err);
+        },
+      });
   }
 }

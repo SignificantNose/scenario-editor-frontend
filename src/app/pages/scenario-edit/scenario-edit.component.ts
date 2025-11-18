@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ScenarioData } from '@models/scenario/list-scenario-data.model';
 import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.service';
+import { ScenarioService } from 'core/services/scenario/scenario.service';
 
 @Component({
   selector: 'app-scenario-edit',
@@ -27,7 +28,8 @@ export class ScenarioEditComponent implements OnInit {
   @ViewChild('designer') scenarioDesigner: ScenarioDesignerComponent | null = null;
 
   scenario: ScenarioData | null = null;
-  private graphql = inject(ScenarioGraphqlService);
+  // private graphql = inject(ScenarioGraphqlService);
+  private scenarioService = inject(ScenarioService);
 
   constructor(
     private router: Router,
@@ -44,17 +46,7 @@ export class ScenarioEditComponent implements OnInit {
       return;
     }
 
-    this.graphql.getScenario(id).subscribe({
-      next: (data) => {
-        this.scenario = data;
-      },
-      error: (err) => {
-        console.error('Failed to fetch scenario:', err);
-        this.router.navigate(['/']);
-      },
-    });
-
-    // this.scenarioService.get(id).subscribe({
+    // this.graphql.getScenario(id).subscribe({
     //   next: (data) => {
     //     this.scenario = data;
     //   },
@@ -63,6 +55,16 @@ export class ScenarioEditComponent implements OnInit {
     //     this.router.navigate(['/']);
     //   },
     // });
+
+    this.scenarioService.get(id).subscribe({
+      next: (data) => {
+        this.scenario = data;
+      },
+      error: (err) => {
+        console.error('Failed to fetch scenario:', err);
+        this.router.navigate(['/']);
+      },
+    });
   }
 
   cancel() {
@@ -76,19 +78,7 @@ export class ScenarioEditComponent implements OnInit {
     }
 
     const updatedScenario = this.scenarioDesigner.getScenario();
-    this.graphql.updateScenario(updatedScenario.id, updatedScenario).subscribe({
-      next: () => {
-        console.log('Scenario changes saved:', updatedScenario);
-        this.router.navigate(['/']);
-      },
-      error: (err) => {
-        console.error('Failed to save scenario:', err);
-      },
-    });
-    ;
-
-
-    // this.scenarioService.update(updatedScenario.id, updatedScenario).subscribe({
+    // this.graphql.updateScenario(updatedScenario.id, updatedScenario).subscribe({
     //   next: () => {
     //     console.log('Scenario changes saved:', updatedScenario);
     //     this.router.navigate(['/']);
@@ -97,5 +87,17 @@ export class ScenarioEditComponent implements OnInit {
     //     console.error('Failed to save scenario:', err);
     //   },
     // });
+    // ;
+
+
+    this.scenarioService.update(updatedScenario.id, updatedScenario).subscribe({
+      next: () => {
+        console.log('Scenario changes saved:', updatedScenario);
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        console.error('Failed to save scenario:', err);
+      },
+    });
   }
 }

@@ -13,7 +13,7 @@
         mat-raised-button
         color="accent"
         class="editor-button"
-        [disabled]="!scenarioDesigner?.isValid"
+        [disabled]="!scenarioDesigner?.isValid || scenarioDesigner?.editMode"
         (click)="saveChanges()"
       >
         Save Changes

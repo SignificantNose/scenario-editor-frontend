@@ -7,6 +7,7 @@ import { DeleteScenarioData } from '@models/scenario/delete-scenario-data.model'
 import { ScenarioFilter } from '@models/scenario/filter.model';
 import { AppConfigService } from '../config/app-config.service';
 import { ApiService } from '../api/api.service';
+import { HttpParams } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class ScenarioService {
@@ -16,16 +17,17 @@ export class ScenarioService {
   constructor(private api: ApiService) { }
 
   list(filter: ScenarioFilter | null = null): Observable<ListScenarioDataResponse> {
-    const params: any = {};
+    let params = new HttpParams();
+
     if (filter) {
       Object.entries(filter).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          params[key] = value;
+          params = params.set(key, value);
         }
       });
-
     }
-    return this.api.get<ListScenarioDataResponse>(this.controller, { params });
+
+    return this.api.get<ListScenarioDataResponse>(this.controller, params);
   }
 
   get(id: number | string): Observable<ScenarioData> {

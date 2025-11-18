@@ -14,6 +14,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 
 import { ScenarioData } from '@models/scenario/list-scenario-data.model';
 import { ScenarioGraphqlService } from 'core/services/scenario/scenario-graphql.service';
+import { ScenarioService } from 'core/services/scenario/scenario.service';
 
 @Component({
   selector: 'app-scenario-list',
@@ -39,7 +40,8 @@ export class ScenarioListComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
-  private graphql = inject(ScenarioGraphqlService);
+  // private graphql = inject(ScenarioGraphqlService);
+  private api = inject(ScenarioService);
 
   scenarios: ScenarioData[] = [];
   loading = true;
@@ -110,26 +112,26 @@ export class ScenarioListComponent {
 
   private fetch(filter: any) {
     this.loading = true;
-    this.graphql.listScenarios().subscribe({
-      next: (res) => {
-        this.scenarios = res;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.error = err.message || 'Failed to load scenarios';
-        this.loading = false;
-      },
-    });
-    // this.api.list(filter).subscribe({
+    // this.graphql.listScenarios().subscribe({
     //   next: (res) => {
     //     this.scenarios = res;
     //     this.loading = false;
     //   },
     //   error: (err) => {
-    //     this.error = err?.error?.error || 'Failed to load scenarios';
+    //     this.error = err.message || 'Failed to load scenarios';
     //     this.loading = false;
     //   },
     // });
+    this.api.list(filter).subscribe({
+      next: (res) => {
+        this.scenarios = res;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err?.error?.error || 'Failed to load scenarios';
+        this.loading = false;
+      },
+    });
   }
 
   createScenario() {
@@ -141,15 +143,7 @@ export class ScenarioListComponent {
   }
 
   deleteScenario(id: number) {
-    this.graphql.deleteScenario(id).subscribe({
-      next: () => {
-        this.scenarios = this.scenarios.filter((s) => s.id !== id);
-      },
-      error: (err) => {
-        this.error = err?.error?.error || 'Failed to delete scenario';
-      },
-    });
-    // this.api.delete({ id }).subscribe({
+    // this.graphql.deleteScenario(id).subscribe({
     //   next: () => {
     //     this.scenarios = this.scenarios.filter((s) => s.id !== id);
     //   },
@@ -157,5 +151,13 @@ export class ScenarioListComponent {
     //     this.error = err?.error?.error || 'Failed to delete scenario';
     //   },
     // });
+    this.api.delete({ id }).subscribe({
+      next: () => {
+        this.scenarios = this.scenarios.filter((s) => s.id !== id);
+      },
+      error: (err) => {
+        this.error = err?.error?.error || 'Failed to delete scenario';
+      },
+    });
   }
 }
