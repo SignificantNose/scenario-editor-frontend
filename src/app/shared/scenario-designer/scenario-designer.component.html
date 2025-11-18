@@ -2,26 +2,6 @@
   <canvas #canvas class="scenario-canvas"></canvas>
 
   <mat-card class="scenario-toolbar">
-    @if (!editMode) {
-      <form [formGroup]="form">
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Scenario Name</mat-label>
-          <input matInput formControlName="name" required />
-          @if (form.controls['name'].hasError('required') && form.controls['name'].touched) {
-            <mat-error> Name is required </mat-error>
-          }
-          @if (form.controls['name'].hasError('pattern') && form.controls['name'].touched) {
-            <mat-error> Invalid name format </mat-error>
-          }
-        </mat-form-field>
-      </form>
-
-      <div class="toolbar-actions">
-        <button mat-stroked-button color="primary" (click)="addEmitter()">Add Emitter</button>
-        <button mat-stroked-button color="accent" (click)="addListener()">Add Listener</button>
-      </div>
-    }
-
     @if (selectedObject) {
       @if (!editMode) {
         <app-designed-object-info
@@ -47,6 +27,125 @@
           (objectTransformChanged)="onObjectTransformChanged()"
         ></app-listener-editor>
       }
+    } @else {
+      <form [formGroup]="form" class="scenario-form">
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Scenario Name</mat-label>
+          <input matInput formControlName="name" required />
+          @if (form.controls['name'].hasError('required') && form.controls['name'].touched) {
+            <mat-error> Name is required </mat-error>
+          }
+          @if (form.controls['name'].hasError('pattern') && form.controls['name'].touched) {
+            <mat-error> Invalid name format </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Temperature (°C)</mat-label>
+          <input matInput type="number" formControlName="temperatureCelsius" required />
+          @if (
+            form.controls['temperatureCelsius'].hasError('required') &&
+            form.controls['temperatureCelsius'].touched
+          ) {
+            <mat-error> Temperature is required </mat-error>
+          }
+          @if (
+            form.controls['temperatureCelsius'].hasError('min') ||
+            form.controls['temperatureCelsius'].hasError('max')
+          ) {
+            <mat-error>
+              Must be between {{ temperatureCelsiusMin }} and {{ temperatureCelsiusMax }} °C
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Humidity (%)</mat-label>
+          <input matInput type="number" formControlName="humidityPercent" required />
+          @if (
+            form.controls['humidityPercent'].hasError('required') &&
+            form.controls['humidityPercent'].touched
+          ) {
+            <mat-error> Humidity is required </mat-error>
+          }
+          @if (
+            form.controls['humidityPercent'].hasError('min') ||
+            form.controls['humidityPercent'].hasError('max')
+          ) {
+            <mat-error>
+              Must be between {{ humidityPercentMin }} and {{ humidityPercentMax }}%
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Atmospheric Pressure (Pa)</mat-label>
+          <input matInput type="number" formControlName="atmosphericPressurePa" required />
+          @if (
+            form.controls['atmosphericPressurePa'].hasError('required') &&
+            form.controls['atmosphericPressurePa'].touched
+          ) {
+            <mat-error> Pressure is required </mat-error>
+          }
+          @if (
+            form.controls['atmosphericPressurePa'].hasError('min') ||
+            form.controls['atmosphericPressurePa'].hasError('max')
+          ) {
+            <mat-error>
+              Must be between {{ atmosphericPressureMin }} and {{ atmosphericPressureMax }} Pa
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <div class="time-range-container">
+          <mat-form-field appearance="fill">
+            <mat-label>Start Time (s)</mat-label>
+            <input matInput type="number" formControlName="scenarioStartTime" required />
+            @if (
+              form.controls['scenarioStartTime'].hasError('required') &&
+              form.controls['scenarioStartTime'].touched
+            ) {
+              <mat-error> Start Time is required </mat-error>
+            }
+            @if (form.controls['scenarioStartTime'].hasError('min')) {
+              <mat-error> Cannot be negative </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>End Time (s)</mat-label>
+            <input matInput type="number" formControlName="scenarioEndTime" required />
+            @if (
+              form.controls['scenarioEndTime'].hasError('required') &&
+              form.controls['scenarioEndTime'].touched
+            ) {
+              <mat-error> End Time is required </mat-error>
+            }
+            @if (form.hasError('minLessThanMax')) {
+              <mat-error> End time must be after start time </mat-error>
+            }
+          </mat-form-field>
+        </div>
+      </form>
+
+      <div class="toolbar-actions">
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="addEmitter()"
+          [disabled]="!preObjectPosition"
+        >
+          Add Emitter
+        </button>
+        <button
+          mat-stroked-button
+          color="accent"
+          (click)="addListener()"
+          [disabled]="!preObjectPosition"
+        >
+          Add Listener
+        </button>
+      </div>
     }
   </mat-card>
 </div>

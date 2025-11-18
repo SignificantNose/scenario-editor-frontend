@@ -17,7 +17,17 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { ScenarioNameRegex } from 'app/const/app.defaults';
+import {
+  AtmosphericPressureMax,
+  AtmosphericPressureMin,
+  EtalonAtmosphericPressurePa,
+  EtalonTemperatureCelsius,
+  HumidityPercentMax,
+  HumidityPercentMin,
+  ScenarioNameRegex,
+  TemperatureCelsiusMax,
+  TemperatureCelsiusMin,
+} from 'app/const/app.defaults';
 import { Subject, takeUntil } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -34,11 +44,13 @@ import {
   markObjectAsEdited,
   restoreDefaultColors,
   showListenerCones,
+  updateDesignedObjectTransform,
 } from 'core/utils/designer-object-creator.util';
 import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
 import { EmitterEditorComponent } from './components/emitter-editor/emitter-editor.component';
 import { ListenerEditorComponent } from './components/listener-editor/listener-editor.component';
 import { DesignedObjectInfoComponent } from './components/designed-object-info/designed-object-info.component';
+import { minLessThanMaxValidator } from 'core/validators/min-less-than-max.validator';
 
 @Component({
   selector: 'app-scenario-designer',
@@ -62,12 +74,55 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   @ViewChild('canvas', { static: false })
   canvasRef: ElementRef<HTMLCanvasElement> | null = null;
 
-  form = new FormGroup({
-    name: new FormControl<string | null>(null, {
-      nonNullable: true,
-      validators: [Validators.required, Validators.pattern(ScenarioNameRegex)],
-    }),
-  });
+  temperatureCelsiusMin = TemperatureCelsiusMin;
+  temperatureCelsiusMax = TemperatureCelsiusMax;
+  humidityPercentMin = HumidityPercentMin;
+  humidityPercentMax = HumidityPercentMax;
+  atmosphericPressureMin = AtmosphericPressureMin;
+  atmosphericPressureMax = AtmosphericPressureMax;
+
+  form = new FormGroup(
+    {
+      name: new FormControl<string | null>(null, {
+        nonNullable: true,
+        validators: [Validators.required, Validators.pattern(ScenarioNameRegex)],
+      }),
+      temperatureCelsius: new FormControl<number | null>(null, {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.min(this.temperatureCelsiusMin),
+          Validators.max(this.temperatureCelsiusMax),
+        ],
+      }),
+      humidityPercent: new FormControl<number | null>(null, {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.min(this.humidityPercentMin),
+          Validators.max(this.humidityPercentMax),
+        ],
+      }),
+      atmosphericPressurePa: new FormControl<number | null>(null, {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.min(this.atmosphericPressureMin),
+          Validators.max(this.atmosphericPressureMax),
+        ],
+      }),
+      scenarioStartTime: new FormControl<number | null>(null, {
+        nonNullable: true,
+        validators: [Validators.required, Validators.min(0)],
+      }),
+      scenarioEndTime: new FormControl<number | null>(null, {
+        nonNullable: true,
+        validators: [Validators.required, Validators.min(0)],
+      }),
+    },
+    { validators: [minLessThanMaxValidator('scenarioStartTime', 'scenarioEndTime')] },
+  );
+
   isValid = false;
   selectedObject: DesignedObject | null = null;
 
@@ -113,7 +168,14 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       ];
       this._idCounter = allIds.length ? Math.max(...allIds) + 1 : 0;
 
-      this.form.patchValue(value);
+      this.form.patchValue({
+        name: value.name,
+        temperatureCelsius: (value as any).temperatureCelsius ?? 20,
+        humidityPercent: (value as any).humidityPercent ?? 50,
+        atmosphericPressurePa: (value as any).atmosphericPressurePa ?? 101325,
+        scenarioStartTime: (value as any).scenarioStartTime ?? 0,
+        scenarioEndTime: (value as any).scenarioEndTime ?? 60,
+      });
 
       setTimeout(() => {
         this._internalScenario.emitters.forEach((e) => this.addExistingEmitter(e));
@@ -135,7 +197,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
   private ground: THREE.Mesh | null = null;
   private preObjectMesh: THREE.Mesh | null = null;
-  private preObjectPosition: THREE.Vector3 | null = null;
+  preObjectPosition: THREE.Vector3 | null = null;
 
   private _internalScenario: ScenarioData = {
     id: 0,
@@ -144,6 +206,11 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     updatedAt: new Date().toISOString(),
     emitters: [],
     listeners: [],
+    temperatureCelsius: EtalonTemperatureCelsius,
+    atmosphericPressurePa: EtalonAtmosphericPressurePa,
+    humidityPercent: 50,
+    scenarioStartTime: 0,
+    scenarioEndTime: 10,
   };
 
   private emitterDisplays: Map<number, DesignedEmitter> = new Map();
@@ -254,14 +321,16 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     }
     const id = this.getNewObjectId();
 
+    // const scenarioStart = this.form.controls.scenarioStartTime.value ?? 0;
+
     const emitter: EmitterData = {
       id,
+      audioFileUri: null,
       position: {
         x: this.preObjectPosition.x,
         y: MinEmitterHeightMeters,
         z: this.preObjectPosition.z,
       },
-      audioFileUri: null,
     };
     this._internalScenario.emitters.push(emitter);
 
@@ -612,7 +681,20 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   public getScenario(): ScenarioData {
-    this._internalScenario.name = this.form.controls.name.value || '';
+    const {
+      name,
+      temperatureCelsius,
+      humidityPercent,
+      atmosphericPressurePa,
+      scenarioStartTime,
+      scenarioEndTime,
+    } = this.form.value;
+    this._internalScenario.name = name ?? '';
+    this._internalScenario.temperatureCelsius = temperatureCelsius ?? 0;
+    this._internalScenario.humidityPercent = humidityPercent ?? 0;
+    this._internalScenario.atmosphericPressurePa = atmosphericPressurePa ?? 0;
+    this._internalScenario.scenarioStartTime = scenarioStartTime ?? 0;
+    this._internalScenario.scenarioEndTime = scenarioEndTime ?? 0;
     return { ...this._internalScenario };
   }
 
@@ -648,7 +730,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     const clone = this.cloneDesignedObject(this.selectedObject);
     this.selectedObject = clone;
 
-    if(clone.type == 'listener'){
+    if (clone.type == 'listener') {
       showListenerCones(clone);
     }
     this.scene.add(clone.displayMesh);
