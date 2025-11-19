@@ -1,33 +1,95 @@
 .edit-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 320px;
+  padding: 1.5rem;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  width: 100%;
-}
+  gap: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 
-h3 {
-  margin: 0 0 8px 0;
-  font-size: 1.1em;
-  font-weight: 600;
-}
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
 
-.full-width {
-  width: 100%;
-}
+  .target-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
 
-.edit-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-}
+    mat-button-toggle-group {
+      width: 100%;
 
-.mat-stroked-button {
-  flex: 1;
-}
+      mat-button-toggle {
+        width: 50%;
+        font-size: 0.9rem;
+      }
+    }
+  }
 
-.file-upload-field .mat-form-field-wrapper {
-  padding-bottom: 0;
+  .section-header {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.54);
+    letter-spacing: 0.05em;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+
+    .half-width {
+      flex: 1;
+      width: 0;
+    }
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .end-point-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+
+    button {
+      width: 100%;
+      border: 1px dashed rgba(0, 0, 0, 0.12);
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+    }
+  }
+
+  .file-upload-field {
+    margin-top: 0.5rem;
+
+    input[readonly] {
+      cursor: default;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .edit-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+
+    button {
+      width: 100%;
+      height: 40px;
+    }
+  }
 }

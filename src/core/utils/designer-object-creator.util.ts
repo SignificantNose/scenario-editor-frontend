@@ -66,7 +66,12 @@ export function createEmitterDisplay(emitterData: EmitterData) {
   tailVer.position.set(-0.3, 0.05, 0);
   group.add(tailVer);
 
-  group.position.set(emitterData.position.x, emitterData.position.y, emitterData.position.z);
+  // FIX: Use startPoint instead of position
+  group.position.set(
+    emitterData.startPoint.x,
+    emitterData.startPoint.y,
+    emitterData.startPoint.z,
+  );
 
   const designedEmitter: DesignedEmitter = {
     type: 'emitter',
@@ -285,7 +290,8 @@ function updateEmitterTransform(
   const { height, audioFileUri } = changes;
 
   if (typeof height === 'number' && height >= MinEmitterHeightMeters) {
-    emitter.data.position.y = height;
+    // FIX: Update startPoint instead of position
+    emitter.data.startPoint.y = height;
     emitter.displayMesh.position.y = height;
   }
 

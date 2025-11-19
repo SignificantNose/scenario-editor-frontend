@@ -4,25 +4,52 @@
       Selected {{ selectedObject.type === 'emitter' ? 'Emitter' : 'Listener' }}
     </h3>
 
-    <p>
-      Position: X: {{ selectedObject.data.position.x.toFixed(2) }}, Y:
-      {{ selectedObject.data.position.y.toFixed(2) }}, Z:
-      {{ selectedObject.data.position.z.toFixed(2) }}
-    </p>
+    @if (selectedObject.type === 'listener') {
+      <div class="info-row">
+        <strong>Position:</strong><br />
+        X: {{ selectedObject.data.position.x.toFixed(2) }}, Y:
+        {{ selectedObject.data.position.y.toFixed(2) }}, Z:
+        {{ selectedObject.data.position.z.toFixed(2) }}
+      </div>
+      <div class="info-row">
+        <strong>Rotation:</strong> {{ selectedObject.data.rotation.toFixed(2) }}°
+      </div>
+    }
 
     @if (selectedObject.type === 'emitter') {
-      <p>Audio File: {{ selectedObject.data.audioFileUri || 'None' }}</p>
-    } @else if (selectedObject.type === 'listener') {
-      <p>Rotation: {{ selectedObject.data.rotation.toFixed(2) }}°</p>
+      <div class="info-row">
+        <strong>Start Point (t={{ selectedObject.data.startTime }}s):</strong><br />
+        X: {{ selectedObject.data.startPoint.x.toFixed(2) }}, Y:
+        {{ selectedObject.data.startPoint.y.toFixed(2) }}, Z:
+        {{ selectedObject.data.startPoint.z.toFixed(2) }}
+      </div>
+
+      @if (selectedObject.data.endPoint) {
+        <div class="info-row">
+          <strong>End Point (t={{ selectedObject.data.endTime ?? 'End' }}s):</strong><br />
+          X: {{ selectedObject.data.endPoint.x.toFixed(2) }}, Y:
+          {{ selectedObject.data.endPoint.y.toFixed(2) }}, Z:
+          {{ selectedObject.data.endPoint.z.toFixed(2) }}
+        </div>
+      } @else {
+        <div class="info-row"><strong>Movement:</strong> Static</div>
+      }
+
+      <div class="info-row">
+        <strong>Audio:</strong>
+        <span class="break-word">{{ selectedObject.data.audioFileUri || 'None' }}</span>
+      </div>
     }
 
     @if (!editMode) {
-      <button mat-stroked-button color="warn" class="full-width" (click)="onDelete()">
-        Delete {{ selectedObject.type }}
-      </button>
-      <button mat-stroked-button color="primary" class="full-width" (click)="onEdit()">
-        Edit {{ selectedObject.type }}
-      </button>
+      <div class="actions-container">
+        <button mat-stroked-button color="warn" class="full-width" (click)="onDelete()">
+          Delete {{ selectedObject.type | titlecase }}
+        </button>
+        <button mat-stroked-button color="primary" class="full-width" (click)="onEdit()">
+          Edit {{ selectedObject.type | titlecase }}
+        </button>
+      </div>
     }
   </mat-card>
 }

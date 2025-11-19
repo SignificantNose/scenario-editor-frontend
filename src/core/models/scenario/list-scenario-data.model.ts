@@ -10,7 +10,10 @@ export type PositionData = v.InferOutput<typeof PositionDataSchema>;
 export type EmitterData = v.InferOutput<typeof EmitterDataSchema>;
 export const EmitterDataSchema = v.object({
   id: v.number(),
-  position: PositionDataSchema,
+  startPoint: PositionDataSchema,
+  startTime: v.number(),
+  endPoint: v.nullable(PositionDataSchema),
+  endTime: v.nullable(v.number()),
   audioFileUri: v.nullable(v.string()),
 });
 

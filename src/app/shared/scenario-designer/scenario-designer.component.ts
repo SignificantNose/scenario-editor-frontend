@@ -9,7 +9,12 @@ import {
   OnDestroy,
 } from '@angular/core';
 import * as THREE from 'three';
-import { ScenarioData, EmitterData, ListenerData } from '@models/scenario/list-scenario-data.model';
+import {
+  ScenarioData,
+  EmitterData,
+  ListenerData,
+  PositionData,
+} from '@models/scenario/list-scenario-data.model';
 import {
   FormControl,
   FormGroup,
@@ -47,10 +52,14 @@ import {
   updateDesignedObjectTransform,
 } from 'core/utils/designer-object-creator.util';
 import { MinEmitterHeightMeters, MinListenerHeightMeters } from 'core/const/scenario.const';
-import { EmitterEditorComponent } from './components/emitter-editor/emitter-editor.component';
+import {
+  EmitterEditorComponent,
+  EmitterEditTarget,
+} from './components/emitter-editor/emitter-editor.component';
 import { ListenerEditorComponent } from './components/listener-editor/listener-editor.component';
 import { DesignedObjectInfoComponent } from './components/designed-object-info/designed-object-info.component';
 import { minLessThanMaxValidator } from 'core/validators/min-less-than-max.validator';
+import { minLessThanOrEqualToMaxValidator } from 'core/validators/min-less-than-or-equal-to-max.validator';
 
 @Component({
   selector: 'app-scenario-designer',
@@ -120,7 +129,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
         validators: [Validators.required, Validators.min(0)],
       }),
     },
-    { validators: [minLessThanMaxValidator('scenarioStartTime', 'scenarioEndTime')] },
+    { validators: [minLessThanOrEqualToMaxValidator('scenarioStartTime', 'scenarioEndTime')] },
   );
 
   isValid = false;
@@ -178,6 +187,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       });
 
       setTimeout(() => {
+        console.log(this._internalScenario.emitters);
         this._internalScenario.emitters.forEach((e) => this.addExistingEmitter(e));
         this._internalScenario.listeners.forEach((l) => this.addExistingListener(l));
       });
@@ -219,6 +229,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
   private _idCounter = 0;
 
   editMode = false;
+  private activeEditTarget: EmitterEditTarget = 'start';
+  private trajectoryLines: Map<number, THREE.Line> = new Map();
 
   constructor(private ngZone: NgZone) { }
 
@@ -321,16 +333,17 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     }
     const id = this.getNewObjectId();
 
-    // const scenarioStart = this.form.controls.scenarioStartTime.value ?? 0;
-
     const emitter: EmitterData = {
       id,
       audioFileUri: null,
-      position: {
+      startPoint: {
         x: this.preObjectPosition.x,
         y: MinEmitterHeightMeters,
         z: this.preObjectPosition.z,
       },
+      startTime: 0,
+      endPoint: null,
+      endTime: null,
     };
     this._internalScenario.emitters.push(emitter);
 
@@ -338,6 +351,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
 
     this.scene.add(designedEmitter.displayMesh);
     this.emitterDisplays.set(id, designedEmitter);
+
+    this.updateEmitterVisuals(designedEmitter);
 
     this.scene.remove(this.preObjectMesh);
     this.preObjectMesh = null;
@@ -384,6 +399,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       this._internalScenario.emitters = this._internalScenario.emitters.filter(
         (e) => e.id !== data.id,
       );
+
+      this.removeTrajectoryLine(data.id);
     } else {
       this.listenerDisplays.delete(data.id);
       this._internalScenario.listeners = this._internalScenario.listeners.filter(
@@ -392,6 +409,23 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     this.selectedObject = null;
+  }
+
+  onEditTargetChanged(target: EmitterEditTarget) {
+    this.activeEditTarget = target;
+
+    if (this.selectedObject) {
+      this.updateEmitterVisuals(this.selectedObject);
+    }
+  }
+
+  private updateEmitterVisuals(obj: DesignedObject) {
+    if (obj.type !== 'emitter' || !this.scene) return;
+
+    const data = obj.data as EmitterData;
+
+    this.updateEmitterRotation(obj.displayMesh, data.startPoint, data.endPoint);
+    this.updateTrajectoryLine(data);
   }
 
   private updateCameraLook() {
@@ -522,8 +556,26 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
+  private updateEmitterRotation(
+    mesh: THREE.Object3D,
+    start: PositionData,
+    end: PositionData | null,
+  ) {
+    if (!end) {
+      mesh.rotation.set(0, 0, 0);
+      return;
+    }
+
+    const startVec = new THREE.Vector3(start.x, start.y, start.z);
+    const endVec = new THREE.Vector3(end.x, end.y, end.z);
+
+    if (startVec.distanceToSquared(endVec) < 0.0001) return;
+
+    mesh.lookAt(endVec);
+    mesh.rotateY(-Math.PI / 2);
+  }
+
   private moveEditedObjectOnClick(event: MouseEvent) {
-    // in edit mode, selectedObject is the edited object
     if (!this.selectedObject || !this.camera || !this.ground) {
       return;
     }
@@ -535,10 +587,30 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     if (intersects.length === 0) return;
 
     const point = intersects[0].point;
-    this.selectedObject.data.position.x = point.x;
-    this.selectedObject.data.position.z = point.z;
-    this.selectedObject.displayMesh.position.setX(point.x);
-    this.selectedObject.displayMesh.position.setZ(point.z);
+
+    if (this.selectedObject.type === 'emitter') {
+      const data = this.selectedObject.data as EmitterData;
+
+      if (this.activeEditTarget === 'start') {
+        data.startPoint.x = point.x;
+        data.startPoint.z = point.z;
+        this.selectedObject.displayMesh.position.setX(point.x);
+        this.selectedObject.displayMesh.position.setZ(point.z);
+      } else {
+        if (!data.endPoint) {
+          data.endPoint = { ...data.startPoint };
+        }
+        data.endPoint.x = point.x;
+        data.endPoint.z = point.z;
+      }
+
+      this.updateEmitterVisuals(this.selectedObject);
+    } else {
+      this.selectedObject.data.position.x = point.x;
+      this.selectedObject.data.position.z = point.z;
+      this.selectedObject.displayMesh.position.setX(point.x);
+      this.selectedObject.displayMesh.position.setZ(point.z);
+    }
   }
 
   private getNormalizedMouse(event: MouseEvent) {
@@ -734,6 +806,9 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       showListenerCones(clone);
     }
     this.scene.add(clone.displayMesh);
+
+    this.activeEditTarget = 'start';
+    this.updateEmitterVisuals(clone);
   }
 
   onEditorSave(editedData: EmitterData | ListenerData) {
@@ -754,7 +829,9 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       const recreated = createEmitterDisplay(editedData as EmitterData);
       this.emitterDisplays.set(recreated.data.id, recreated);
       this.scene.add(recreated.displayMesh);
-      this.selectedObject = recreated;
+
+      this.updateEmitterVisuals(recreated);
+      this.selectedObject = null;
     } else {
       const originalListenerIndex = this._internalScenario.listeners.findIndex(
         (l) => l.id === editedData.id,
@@ -788,6 +865,7 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
       }
       recreated = createEmitterDisplay(originalEmitter);
       this.emitterDisplays.set(recreated.data.id, recreated);
+      this.updateEmitterVisuals(recreated);
     } else {
       const originalListener = this._internalScenario.listeners.find(
         (l) => l.id === editedClone.data.id,
@@ -806,7 +884,122 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     this.exitEditMode();
   }
 
-  onObjectTransformChanged() { }
+  onObjectTransformChanged() {
+    if (this.selectedObject && this.selectedObject.type === 'emitter') {
+      const data = this.selectedObject.data as EmitterData;
+      this.selectedObject.displayMesh.position.setY(data.startPoint.y);
+      this.updateEmitterVisuals(this.selectedObject);
+    }
+  }
+
+  private updateTrajectoryLine(data: EmitterData) {
+    if (!this.scene) return;
+    const lineId = data.id;
+    let line = this.trajectoryLines.get(lineId);
+
+    if (!data.endPoint) {
+      this.removeTrajectoryLine(lineId);
+      return;
+    }
+
+    const startVec = new THREE.Vector3(data.startPoint.x, data.startPoint.y, data.startPoint.z);
+    const endVec = new THREE.Vector3(data.endPoint.x, data.endPoint.y, data.endPoint.z);
+
+    if (!line) {
+      const geometry = new THREE.BufferGeometry().setFromPoints([startVec, endVec]);
+
+      const material = new THREE.LineDashedMaterial({
+        color: 0x0000ff,
+        linewidth: 1,
+        scale: 1,
+        dashSize: 0.5,
+        gapSize: 0.2,
+        transparent: true,
+        opacity: 0.5,
+        depthTest: false, // Always visible
+      });
+
+      line = new THREE.Line(geometry, material);
+      line.frustumCulled = false; // Prevent disappearing
+      line.renderOrder = 999; // Render on top/through
+      line.computeLineDistances(); // Required for dashes
+
+      this.scene.add(line);
+      this.trajectoryLines.set(lineId, line);
+    } else {
+      line.geometry.setFromPoints([startVec, endVec]);
+      line.computeLineDistances();
+      line.geometry.attributes['position'].needsUpdate = true;
+    }
+  }
+
+  private removeTrajectoryLine(id: number) {
+    const line = this.trajectoryLines.get(id);
+    if (line && this.scene) {
+      this.scene.remove(line);
+      line.geometry.dispose();
+      (line.material as THREE.Material).dispose();
+      this.trajectoryLines.delete(id);
+    }
+  }
+
+  private updateTrajectoryVisuals(obj: DesignedObject) {
+    if (obj.type !== 'emitter' || !this.scene) {
+      return;
+    }
+
+    const data = obj.data as EmitterData;
+    const lineId = data.id;
+    let line = this.trajectoryLines.get(lineId);
+
+    this.updateEmitterRotation(obj.displayMesh, data.startPoint, data.endPoint);
+
+    if (!data.endPoint) {
+      if (line) {
+        this.scene.remove(line);
+        if (line.geometry) {
+          line.geometry.dispose();
+        }
+        const mat = line.material as THREE.Material;
+        if (mat) {
+          mat.dispose();
+        }
+        this.trajectoryLines.delete(lineId);
+      }
+      return;
+    }
+
+    const startVec = new THREE.Vector3(data.startPoint.x, data.startPoint.y, data.startPoint.z);
+    const endVec = new THREE.Vector3(data.endPoint.x, data.endPoint.y, data.endPoint.z);
+
+    if (!line) {
+      const geometry = new THREE.BufferGeometry().setFromPoints([startVec, endVec]);
+
+      const material = new THREE.LineDashedMaterial({
+        color: 0x0000ff,
+        linewidth: 1,
+        scale: 1,
+        dashSize: 0.5,
+        gapSize: 0.2,
+        transparent: true,
+        opacity: 0.5,
+        depthTest: false,
+      });
+      line = new THREE.Line(geometry, material);
+
+      line.frustumCulled = false;
+
+      line.computeLineDistances();
+
+      line.renderOrder = 999;
+      this.scene.add(line);
+      this.trajectoryLines.set(lineId, line);
+    } else {
+      line.geometry.setFromPoints([startVec, endVec]);
+      line.computeLineDistances();
+      line.geometry.attributes['position'].needsUpdate = true;
+    }
+  }
 
   private exitEditMode() {
     this.editMode = false;
@@ -831,6 +1024,8 @@ export class ScenarioDesignerComponent implements OnInit, AfterViewInit, OnDestr
     const designedEmitter = createEmitterDisplay(emitter);
     this.scene.add(designedEmitter.displayMesh);
     this.emitterDisplays.set(emitter.id, designedEmitter);
+
+    this.updateEmitterVisuals(designedEmitter);
   }
 
   private addExistingListener(listener: ListenerData) {

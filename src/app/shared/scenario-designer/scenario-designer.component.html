@@ -18,6 +18,7 @@
           (save)="onEditorSave($event)"
           (cancel)="onEditorCancel()"
           (objectTransformChanged)="onObjectTransformChanged()"
+          (editTargetChanged)="onEditTargetChanged($event)"
         ></app-emitter-editor>
       } @else if (editMode && selectedObject.type === 'listener') {
         <app-listener-editor
